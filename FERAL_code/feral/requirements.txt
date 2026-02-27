@@ -1,0 +1,10 @@
+pandas
+scikit-learn
+decord
+transformers
+wandb
+timm
+hf_xet
+opencv-python
+matplotlib
+hf_transfer
