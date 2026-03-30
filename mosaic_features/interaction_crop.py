@@ -345,8 +345,8 @@ class InteractionCropPipeline:
             cy = np.nanmean(ys, axis=1)
         elif mode == "pose0" or isinstance(mode, int):
             idx = 0 if mode == "pose0" else int(mode)
-            cx = df_target[f"{p.pose.x_prefix}{idx}"].to_numpy(dtype=np.float64)
-            cy = df_target[f"{p.pose.y_prefix}{idx}"].to_numpy(dtype=np.float64)
+            cx = df_target[f"{p.pose.x_prefix}{idx}"].to_numpy(dtype=np.float64).copy()
+            cy = df_target[f"{p.pose.y_prefix}{idx}"].to_numpy(dtype=np.float64).copy()
         else:
             raise ValueError(f"Unknown center_mode: {mode}")
 
