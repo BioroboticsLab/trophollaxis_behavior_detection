@@ -153,6 +153,8 @@ class InteractionCropPipeline:
 
         from mosaic.media.video_io import MultiVideoReader
 
+        cv2.setNumThreads(2)  # prevent OpenCV from saturating all cores
+
         p = self.params
         group = str(df[C.group_col].iloc[0]) if C.group_col in df.columns else ""
         sequence = str(df[C.seq_col].iloc[0]) if C.seq_col in df.columns else ""
@@ -258,13 +260,24 @@ class InteractionCropPipeline:
         frame_set = set(frame_indices.tolist())
         frame_to_geom_idx = {int(f): i for i, f in enumerate(frame_indices)}
 
-        if p.grayscale:
+        # FFmpegVideoWriter supports NVENC GPU encoding for BGR output;
+        # grayscale requires cv2.VideoWriter (FFmpeg writer expects BGR24)
+        use_ffmpeg_writer = False
+        if not p.grayscale:
+            try:
+                from mosaic.media.video_io import FFmpegVideoWriter
+                writer = FFmpegVideoWriter(
+                    video_out, crop_w, crop_h, fps=output_fps,
+                    hwaccel=True, preset="fast",
+                )
+                use_ffmpeg_writer = True
+            except (ImportError, RuntimeError):
+                writer = create_video_writer(video_out, output_fps, (crop_w, crop_h))
+        else:
             codec = cv2.VideoWriter_fourcc(*"mp4v")
             writer = cv2.VideoWriter(
                 str(video_out), codec, float(output_fps), (crop_w, crop_h), isColor=False
             )
-        else:
-            writer = create_video_writer(video_out, output_fps, (crop_w, crop_h))
 
         n_written = 0
         try:
@@ -284,7 +297,10 @@ class InteractionCropPipeline:
                 writer.write(crop)
                 n_written += 1
         finally:
-            writer.release()
+            if use_ffmpeg_writer:
+                writer.close()
+            else:
+                writer.release()
 
         if n_written == 0:
             video_out.unlink(missing_ok=True)
