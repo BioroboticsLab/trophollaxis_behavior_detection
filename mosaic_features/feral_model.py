@@ -159,11 +159,17 @@ class FERALModel:
         self._config = cfg
         self._run_root = Path(run_root)
 
-    def train(self) -> dict:
+    def train(self, progress_callback=None) -> dict:
         """Run FERAL training loop. Returns metrics dict.
 
         Imports FERAL modules at runtime (requires feral_code_dir on path).
         Saves best checkpoint to ``run_root/model_best.pt``.
+
+        Parameters
+        ----------
+        progress_callback : optional
+            If provided, ``on_epoch_end(epoch, total, metrics)`` is called
+            after each epoch.  Detected automatically by ``train_model()``.
         """
         import torch
 
@@ -417,6 +423,9 @@ class FERALModel:
             training_metrics.append(epoch_metrics)
             print(f"Epoch {epoch}: {epoch_metrics}")
 
+            if progress_callback is not None:
+                progress_callback.on_epoch_end(epoch, cfg["epochs"], epoch_metrics)
+
             if epochs_without_improvement >= cfg["patience"]:
                 print(f"Early stopping at epoch {epoch}")
                 break
@@ -546,6 +555,8 @@ class FERALModel:
 
         for _, row in df_feat.iterrows():
             video_path = row.get("video_path")
+            if video_path is not None and not Path(video_path).is_absolute():
+                video_path = str(Path(cfg["video_dir"]) / video_path)
             if video_path is None or not Path(video_path).exists():
                 continue
 

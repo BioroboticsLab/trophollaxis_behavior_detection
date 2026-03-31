@@ -244,11 +244,10 @@ class InteractionCropPipeline:
         if df_target.empty:
             return None
 
-        # Output path
+        # Output path — flat naming for FERAL compatibility
         out_dir = self._get_output_dir(group, sequence)
-        seg_dir = out_dir / f"bees_{id_a}_and_{id_b}_{start_frame}--{end_frame}"
-        seg_dir.mkdir(parents=True, exist_ok=True)
-        video_out = seg_dir / f"bee_{target_id}.mp4"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        video_out = out_dir / f"{sequence}_bees_{id_a}_and_{id_b}_{start_frame}--{end_frame}_bee_{target_id}.mp4"
 
         crop_w, crop_h = p.crop_size
 
@@ -319,7 +318,7 @@ class InteractionCropPipeline:
             "start_frame": start_frame,
             "end_frame": end_frame,
             "n_frames": n_written,
-            "video_path": str(video_out),
+            "video_path": video_out.name,
         }
 
     # --- Vectorized geometry ---
@@ -459,8 +458,8 @@ class InteractionCropPipeline:
 
     def _get_output_dir(self, group: str, sequence: str) -> Path:
         if self.params.output_root:
-            return Path(self.params.output_root) / f"{group}__{sequence}"
+            return Path(self.params.output_root)
         if self._run_root is not None:
-            return self._run_root / f"{group}__{sequence}"
+            return self._run_root
         media_root = Path(self._ds.get_root("media"))
-        return media_root / "interaction_crops" / f"{group}__{sequence}"
+        return media_root / "interaction_crops"
