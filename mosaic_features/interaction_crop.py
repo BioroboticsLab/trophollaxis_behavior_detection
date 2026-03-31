@@ -65,12 +65,13 @@ class InteractionCropPipeline:
 
     Output
     ------
-    Videos are written to ``media/interaction_crops/<group>__<sequence>/``.
-    Returns a metadata DataFrame with one row per generated clip.
+    Videos are written to ``<run_root>/<group>__<sequence>/`` when run via
+    the pipeline (run_id-tagged), or to ``media/interaction_crops/`` as
+    fallback.  Returns a metadata DataFrame with one row per generated clip.
     """
 
     name = "interaction-crop-pipeline"
-    version = "0.1"
+    version = "0.2"
     parallelizable = True
     scope_dependent = False
 
@@ -114,6 +115,7 @@ class InteractionCropPipeline:
         self.params = self.Params.from_overrides(params)
         self._ds = None
         self._scope: Scope = Scope()
+        self._run_root: Path | None = None
 
     # --- Dataset hooks ---
 
@@ -131,6 +133,7 @@ class InteractionCropPipeline:
         artifact_paths: dict[str, Path],
         dependency_lookups: dict[str, DependencyLookup],
     ) -> bool:
+        self._run_root = run_root
         return True
 
     def fit(self, inputs: InputStream) -> None:
@@ -457,5 +460,7 @@ class InteractionCropPipeline:
     def _get_output_dir(self, group: str, sequence: str) -> Path:
         if self.params.output_root:
             return Path(self.params.output_root) / f"{group}__{sequence}"
+        if self._run_root is not None:
+            return self._run_root / f"{group}__{sequence}"
         media_root = Path(self._ds.get_root("media"))
         return media_root / "interaction_crops" / f"{group}__{sequence}"
